@@ -39,10 +39,10 @@ use crate::transport::Error;
 
 use self::{
     graceful::GracefulShutdown,
-    service::{RecoverError, ServerIo},
+    service::{ConnectInfoLayer, ServerIo},
 };
-use super::service::GrpcTimeout;
-use crate::body::{boxed, BoxBody};
+use crate::service::{GrpcTimeoutLayer, RecoverErrorLayer};
+use crate::body::Body;
 use crate::server::NamedService;
 use bytes::Bytes;
 use http::{Request, Response};
@@ -953,7 +953,7 @@ where
         let svc = ServiceBuilder::new()
             .layer_fn(RecoverError::new)
             .option_layer(concurrency_limit.map(ConcurrencyLimitLayer::new))
-            .layer_fn(|s| GrpcTimeout::new(s, timeout))
+            .layer(GrpcTimeoutLayer::new(timeout))
             .service(svc);
 
         let svc = ServiceBuilder::new()
@@ -1000,7 +1000,7 @@ struct Fuse<F> {
 }
 
 impl<F> Future for Fuse<F>
-where
+whereConnectInfoLayer
     F: Future,
 {
     type Output = F::Output;
